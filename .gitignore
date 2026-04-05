@@ -1,0 +1,13 @@
+# Environment — never commit credentials
+.env
+
+# Export output — local only
+exports/*
+!exports/.gitkeep
+
+# Node
+node_modules/
+npm-debug.log*
+
+# macOS
+.DS_Store
