@@ -1,0 +1,16 @@
+{
+  "name": "neuruh-notion-exporter",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Export Notion pages as markdown for NotebookLM upload — built by Neuruh",
+  "main": "exporter.mjs",
+  "scripts": {
+    "export": "node exporter.mjs",
+    "list": "node exporter.mjs --list",
+    "export:all": "node exporter.mjs --all"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.14",
+    "dotenv": "^16.4.5"
+  }
+}
