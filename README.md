@@ -1,208 +1,165 @@
 # Notion Auto-Exporter
 
-**Built by [Neuruh](https://neuruh.com) — Open Source**
+Reads a Notion "source hub" page, downloads every checked linked page as markdown, organises
+the output by section, and writes a combined `_ALL_SOURCES.md` per section plus one
+`_MASTER_ALL_SOURCES.md` — a shape most RAG pipelines and document-upload tools accept directly.
 
-Reads a Notion Source Hub page, downloads linked pages as markdown, organizes output by build folder, and assembles combined `_ALL_SOURCES.md` files per section plus a `_MASTER_ALL_SOURCES.md` — ready for direct upload to NotebookLM or any RAG pipeline.
+## What it does
 
-This tool was built inside the Neuruh operating system as part of the **Source Hub workflow** — a pattern for maintaining curated, AI-ready knowledge bases directly inside Notion, then exporting them on demand for NotebookLM training sessions, agent context injection, and prompt engineering pipelines.
-
----
-
-## What It Does
+The source hub is an ordinary Notion page used as an export manifest. Headings become section
+names; checked to-do or linked-list items become export targets. Unchecked items are skipped.
 
 ```
-Notion Source Hub Page
-  ├── [x] Build: AXON Gateway          ← checked = export target
-  ├── [x] Build: DISPATCH-IQ Spec
-  ├── [ ] Build: Draft (skipped)
-  └── [x] Context: PMLA Architecture
+Notion source hub page
+  ## Handbook
+  - [x] Onboarding Guide         <- exported
+  - [x] Support Playbook         <- exported
+  - [ ] Draft Notes              <- skipped
+  ## Reference
+  - [x] API Overview             <- exported
 
-              ↓  node exporter.mjs
+              node exporter.mjs
 
 exports/
-  ├── axon-gateway/
-  │   ├── AXON Gateway Phase 1.md
-  │   ├── AXON Dev Log.md
-  │   └── _ALL_SOURCES.md             ← upload this to NotebookLM
-  ├── dispatch-iq-spec/
-  │   ├── DISPATCH-IQ Full Spec.md
-  │   └── _ALL_SOURCES.md
-  └── _MASTER_ALL_SOURCES.md          ← or this for everything at once
+  handbook/
+    Onboarding Guide.md
+    Support Playbook.md
+    _ALL_SOURCES.md
+  reference/
+    API Overview.md
+    _ALL_SOURCES.md
+  _MASTER_ALL_SOURCES.md
 ```
 
-**The rule is simple:** check a box on your Source Hub page → it gets exported next run.
+Check a box, and the page is included on the next run.
 
----
+## Requirements
 
-## Stack
+- Node.js 18 or newer
+- A Notion integration token with read access to the pages you want to export
 
-- **Runtime:** Node.js (ESM)
-- **Notion SDK:** `@notionhq/client`
-- **Config:** `dotenv`
-- **No build step.** No TypeScript compile. No framework. Runs directly.
-
----
-
-## Source Hub Workflow
-
-The Source Hub is a Notion page that acts as the export manifest for a build or project. Structure it like this:
-
-```
-## AXON Gateway
-
-- [x] [AXON Phase 1 Spec](https://notion.so/...)
-- [x] [AXON Dev Log](https://notion.so/...)
-- [ ] [Scratch Notes](https://notion.so/...)    ← unchecked = skipped
-
-## DISPATCH-IQ
-
-- [x] [Full System Spec](https://notion.so/...)
-- [x] [RTL-SDR Hardware Notes](https://notion.so/...)
-```
-
-The exporter reads headings as section names (used for folder organization), then collects every **checked** to-do or linked list item with a Notion URL. Unchecked items are ignored. Headings become the subfolder names inside `exports/`.
-
-Once exported, each section folder contains individual `.md` files plus a `_ALL_SOURCES.md` that concatenates everything in that section — one file, ready to drop into NotebookLM as a single source document.
-
----
-
-## Setup
-
-### Prerequisites
-
-- Node.js 18+ (check: `node --version`)
-- A Notion account with at least one integration created
-
-### 1. Clone the repo
+## Install
 
 ```bash
 git clone https://github.com/NeuruhAI/notion-auto-exporter.git
 cd notion-auto-exporter
-```
-
-### 2. Install dependencies
-
-```bash
 npm install
 ```
 
-This installs `@notionhq/client` and `dotenv`. Nothing else.
+This installs `@notionhq/client` and `dotenv`. There is no build step.
 
-### 3. Create your Notion integration
+## Configure
 
-1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
-2. Click **New integration**
-3. Name it `Neuruh Exporter` (or anything you want)
-4. Set capabilities: **Read content** + **Read user info**
-5. Copy the token that starts with `ntn_`
-
-### 4. Configure environment
+Create the integration at [notion.so/my-integrations](https://www.notion.so/my-integrations)
+with the **Read content** and **Read user info** capabilities, then copy the token.
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and fill in:
-
 ```bash
-NOTION_TOKEN=ntn_your_actual_token_here
+NOTION_TOKEN=ntn_your_token_here
 SOURCE_HUB_PAGE_ID=your_source_hub_page_id_here
 OUTPUT_DIR=./exports
 ```
 
-**Finding your Source Hub page ID:**
-Open the page in Notion → look at the URL → copy the 32-character hex string at the end:
+The page ID is the 32-character hex string at the end of the page URL:
+
 ```
 https://www.notion.so/Your-Page-Title-839c227d86d649c5ac48491ed0dd4348
                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                                       This is your page ID
 ```
 
-### 5. Share pages with your integration
+Then share each page — including the source hub itself — with the integration:
+open the page, `···` → **Connections** → add the integration. Child pages inherit access.
+This step is not optional: the Notion API returns nothing, without an error, for pages an
+integration cannot see.
 
-This step is required. The Notion API will silently return nothing for pages your integration can't access.
-
-For each page you want to export (including the Source Hub itself):
-1. Open the page in Notion
-2. Click `···` (top right) → **Connections**
-3. Add your integration by name
-
-You only need to do this once per page. Child pages inherit access automatically.
-
----
-
-## Usage
+## Sixty-second example
 
 ```bash
-# See what the Source Hub would export (dry run)
 npm run list
+```
 
-# Export all checked pages from Source Hub
+Expected output — one line per page the source hub would export, and nothing is written:
+
+```text
+Notion Auto-Exporter
+
+Reading Source Hub page...
+Found 3 linked pages
+
+  1. [handbook] Onboarding Guide
+  2. [handbook] Support Playbook
+  3. [reference] API Overview
+```
+
+Then run the export:
+
+```bash
 npm run export
+```
 
-# Export a specific page by ID (no Source Hub required)
+```text
+Exporting: Onboarding Guide...
+  saved: exports/handbook/Onboarding Guide.md
+...
+Combined file: exports/handbook/_ALL_SOURCES.md (2 pages)
+Combined file: exports/reference/_ALL_SOURCES.md (1 pages)
+Master combined: exports/_MASTER_ALL_SOURCES.md (3 total pages)
+
+Done: 3 exported, 0 failed
+```
+
+A single page can also be exported directly, with no source hub:
+
+```bash
 node exporter.mjs 839c227d86d649c5ac48491ed0dd4348
 ```
 
-### Output structure
+## API
 
-After running `npm run export`:
+The module exports its pure conversion functions, so they can be used or tested without a
+Notion token:
 
+| Export | Purpose |
+| --- | --- |
+| `richTextToMarkdown(richTextArray)` | Notion rich text to markdown, annotations and links applied. |
+| `blockToMarkdown(block, depth = 0)` | One Notion block to a markdown line, indented by depth. |
+| `extractPageId(url)` | The 32-character page ID from a Notion URL, or `null`. |
+| `createCombinedFile(results, outputDir)` | Write the per-section and master combined files. |
+
+Importing the module does not start the CLI.
+
+## Test
+
+```bash
+npm test
 ```
-exports/
-  ├── <section-name>/
-  │   ├── Page Title One.md
-  │   ├── Page Title Two.md
-  │   └── _ALL_SOURCES.md        ← section combined file
-  └── _MASTER_ALL_SOURCES.md     ← everything combined
-```
-
-Upload `_ALL_SOURCES.md` (per section) or `_MASTER_ALL_SOURCES.md` (everything) to [NotebookLM](https://notebooklm.google.com).
-
----
-
-## NotebookLM Upload
-
-1. Go to [notebooklm.google.com](https://notebooklm.google.com)
-2. Create a new notebook (or open existing)
-3. Click **+** → **Upload** → select your `_ALL_SOURCES.md` or `_MASTER_ALL_SOURCES.md`
-4. NotebookLM processes the file and makes all pages searchable and citeable
-
-NotebookLM handles the 200k token limit per source — if your combined file exceeds that, use the per-section files instead.
-
----
-
-## Verification Checklist
-
-Before your first export run, confirm:
-
-- [ ] Notion integration token created and in `.env`
-- [ ] Source Hub page shared with integration
-- [ ] `npm run list` shows your expected pages
-- [ ] `npm run export` creates `.md` files in `./exports/`
-- [ ] `_ALL_SOURCES.md` files created per section
-- [ ] `_MASTER_ALL_SOURCES.md` contains all pages
-- [ ] Upload to NotebookLM succeeds
-
----
 
 ## Limitations
 
-- **Images** are exported as markdown image links. NotebookLM ignores images — only text content is indexed.
-- **Databases** are noted but not recursively exported. Export individual pages from within a database instead.
-- **Rate limit** is handled automatically (350ms delay between requests). Large exports take proportionally longer.
-- **Nested toggles** are fetched one level deep. Deeply nested content may be incomplete.
+- Images become markdown image links. Whether they are indexed is up to the consuming tool.
+- Databases are noted but not recursively exported. Export pages from within a database instead.
+- Requests are spaced 350 ms apart to stay inside Notion's rate limit, so large exports take
+  proportionally longer.
+- Nested toggles are fetched one level deep; more deeply nested content may be incomplete.
+- Block types the converter does not handle are emitted as an HTML comment naming the type,
+  rather than dropped silently.
 
----
+## Safety boundary
+
+The token in `.env` grants read access to every page shared with the integration, and every
+exported page is written to the local filesystem in plain text. Share only the pages you intend
+to export, keep `OUTPUT_DIR` out of version control (`.gitignore` already excludes `exports/`),
+and treat a combined `_ALL_SOURCES.md` as containing everything the integration could read.
+
+The tool only reads from Notion. It never writes to, edits, or deletes a Notion page.
 
 ## Contributing
 
-Pull requests welcome. Open an issue first for anything beyond bug fixes.
-
-Built on the open-core Neuruh stack. More tools at [github.com/NeuruhAI](https://github.com/NeuruhAI).
-
----
+Pull requests are welcome. Please open an issue first for anything beyond a bug fix.
 
 ## License
 
-MIT License. Use it, fork it, ship it.
+MIT. See [`LICENSE`](LICENSE).

@@ -1,13 +1,32 @@
 {
   "name": "neuruh-notion-exporter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
-  "description": "Export Notion pages as markdown for NotebookLM upload — built by Neuruh",
+  "description": "Export checked Notion pages as markdown, organised by section, with combined files for RAG upload.",
+  "license": "MIT",
   "main": "exporter.mjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "exporter.mjs",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NeuruhAI/notion-auto-exporter.git"
+  },
+  "homepage": "https://github.com/NeuruhAI/notion-auto-exporter#readme",
+  "bugs": {
+    "url": "https://github.com/NeuruhAI/notion-auto-exporter/issues"
+  },
   "scripts": {
     "export": "node exporter.mjs",
     "list": "node exporter.mjs --list",
-    "export:all": "node exporter.mjs --all"
+    "export:all": "node exporter.mjs --all",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@notionhq/client": "^2.2.14",

@@ -2,6 +2,7 @@ import { Client } from '@notionhq/client'
 import { config } from 'dotenv'
 import fs from 'fs/promises'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
 config()
 
@@ -13,7 +14,7 @@ const SOURCE_HUB_ID = process.env.SOURCE_HUB_PAGE_ID
 // NOTION BLOCK → MARKDOWN CONVERTER
 // ═══════════════════════════════════════════
 
-function richTextToMarkdown(richTextArray) {
+export function richTextToMarkdown(richTextArray) {
   if (!richTextArray || richTextArray.length === 0) return ''
   return richTextArray.map(rt => {
     let text = rt.plain_text || ''
@@ -26,7 +27,7 @@ function richTextToMarkdown(richTextArray) {
   }).join('')
 }
 
-function blockToMarkdown(block, depth = 0) {
+export function blockToMarkdown(block, depth = 0) {
   const indent = '  '.repeat(depth)
   const type = block.type
 
@@ -187,7 +188,7 @@ async function getSourceHubLinks() {
   return links
 }
 
-function extractPageId(url) {
+export function extractPageId(url) {
   // Notion URLs: https://www.notion.so/Page-Title-<32-char-hex-id>
   const match = url.match(/([a-f0-9]{32})$/)
   if (match) return match[1]
@@ -210,7 +211,7 @@ async function exportPages(pageIds, outputDir) {
 
   for (const { pageId, section, title } of pageIds) {
     try {
-      console.log(`📄 Exporting: ${title || pageId}...`)
+      console.log(`Exporting: ${title || pageId}...`)
       const { title: pageTitle, markdown } = await pageToMarkdown(pageId)
 
       const safeName = pageTitle.replace(/[^a-zA-Z0-9-_ ]/g, '').trim().substring(0, 80)
@@ -221,12 +222,12 @@ async function exportPages(pageIds, outputDir) {
       await fs.writeFile(filePath, markdown, 'utf-8')
 
       results.push({ title: pageTitle, path: filePath, section })
-      console.log(`  ✅ Saved: ${filePath}`)
+      console.log(`  saved: ${filePath}`)
 
       // Respect Notion API rate limit (~3 req/sec)
       await new Promise(r => setTimeout(r, 350))
     } catch (err) {
-      console.error(`  ❌ Failed: ${title || pageId} — ${err.message}`)
+      console.error(`  failed: ${title || pageId} — ${err.message}`)
       results.push({ title: title || pageId, error: err.message })
     }
   }
@@ -234,7 +235,7 @@ async function exportPages(pageIds, outputDir) {
   return results
 }
 
-async function createCombinedFile(results, outputDir) {
+export async function createCombinedFile(results, outputDir) {
   const sections = new Map()
 
   for (const r of results) {
@@ -251,7 +252,7 @@ async function createCombinedFile(results, outputDir) {
     const combined = pages.map(p => `\n\n${'='.repeat(60)}\n# ${p.title}\n${'='.repeat(60)}\n\n${p.content}`).join('\n')
     const filePath = path.join(outputDir, section, '_ALL_SOURCES.md')
     await fs.writeFile(filePath, combined, 'utf-8')
-    console.log(`📦 Combined file: ${filePath} (${pages.length} pages)`)
+    console.log(`Combined file: ${filePath} (${pages.length} pages)`)
   }
 
   // Master combined file — upload this to NotebookLM
@@ -259,7 +260,7 @@ async function createCombinedFile(results, outputDir) {
   const masterCombined = allPages.map(p => `\n\n${'='.repeat(60)}\n# ${p.title}\n${'='.repeat(60)}\n\n${p.content}`).join('\n')
   const masterPath = path.join(outputDir, '_MASTER_ALL_SOURCES.md')
   await fs.writeFile(masterPath, masterCombined, 'utf-8')
-  console.log(`📦 Master combined: ${masterPath} (${allPages.length} total pages)`)
+  console.log(`Master combined: ${masterPath} (${allPages.length} total pages)`)
 }
 
 // ═══════════════════════════════════════════
@@ -271,10 +272,10 @@ async function main() {
   const listOnly = args.includes('--list')
   const exportAll = args.includes('--all')
 
-  console.log('\n🚀 NEURUH Notion Auto-Exporter\n')
+  console.log('\nNotion Auto-Exporter\n')
 
   if (SOURCE_HUB_ID) {
-    console.log('📋 Reading Source Hub page...')
+    console.log('Reading Source Hub page...')
     const links = await getSourceHubLinks()
     console.log(`Found ${links.length} linked pages\n`)
 
@@ -288,7 +289,7 @@ async function main() {
 
     const success = results.filter(r => !r.error).length
     const failed = results.filter(r => r.error).length
-    console.log(`\n✅ Done: ${success} exported, ${failed} failed`)
+    console.log(`\nDone: ${success} exported, ${failed} failed`)
   } else if (args.length > 0 && !listOnly && !exportAll) {
     // Export specific page IDs passed as args
     const pageIds = args.map(id => ({ pageId: id, section: 'manual', title: id }))
@@ -303,7 +304,12 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err)
-  process.exit(1)
-})
+const isEntryPoint =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (isEntryPoint) {
+  main().catch(err => {
+    console.error('Fatal error:', err)
+    process.exit(1)
+  })
+}
