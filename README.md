@@ -1,5 +1,7 @@
 # Notion Auto-Exporter
 
+[![ci](https://github.com/NeuruhAI/notion-auto-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/NeuruhAI/notion-auto-exporter/actions/workflows/ci.yml)
+
 Reads a Notion "source hub" page, downloads every checked linked page as markdown, organises
 the output by section, and writes a combined `_ALL_SOURCES.md` per section plus one
 `_MASTER_ALL_SOURCES.md` — a shape most RAG pipelines and document-upload tools accept directly.
